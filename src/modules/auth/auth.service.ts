@@ -128,8 +128,6 @@ export class AuthService {
       user.password,
     );
 
-    // await this.mailService.resetPassword(user.email, resetToken, user.fullName);
-
     return { user, resetToken };
   }
 
