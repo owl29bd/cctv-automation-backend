@@ -68,7 +68,6 @@ export class UserManagementController {
   }
 
   @ApiResponse({ type: PaginatedUserResponse })
-  @AllowedRoles(Role.Admin, Role.SI)
   @ApiQuery({ type: PaginationQueryOptions })
   @Get()
   async getUsers(@Query(QueryTransformPipe) query: PaginationQueryDto) {
