@@ -1,0 +1,15 @@
+export enum Role {
+  User = 'User',
+  Admin = 'admin',
+  Teacher = 'teacher',
+  Student = 'student',
+  Parent = 'parent',
+  Analyst = 'Analyst',
+  Investigator = 'Investigator',
+  SA = 'Senior Analyst',
+  SI = 'Senior Investigator',
+  PIL = 'Principal Investigator Lead',
+  REPORT_APPROVER = 'Report Approver',
+  DELIVERY_APPROVER = 'Delivery Approver',
+  UPLOADER = 'Uploader',
+}
