@@ -12,6 +12,8 @@ import { RolesGuard } from './guards/roles.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { TokenModule } from './modules/token/token.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
+import { MaintenanceRequestModule } from './modules/maintenance-request/maintenance-request.module';
+import { CameraModule } from './modules/camera/camera.module';
 import { SchemaModule } from './schema/schema.module';
 
 @Module({
@@ -58,6 +60,8 @@ import { SchemaModule } from './schema/schema.module';
     AuthModule,
     TokenModule,
     UserManagementModule,
+    MaintenanceRequestModule,
+    CameraModule,
   ],
   controllers: [AppController],
   providers: [
