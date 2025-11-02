@@ -27,3 +27,10 @@ export class RejectVerificationDto {
   notes?: string;
 }
 
+export class AssignServiceProviderDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  serviceProviderId?: string;
+}
+

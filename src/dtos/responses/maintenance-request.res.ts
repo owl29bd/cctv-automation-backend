@@ -1,9 +1,10 @@
-import { Expose, Type } from 'class-transformer';
+import { Expose, Transform, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
 import { BaseResponse } from './base.res';
 import { PaginatedResponse } from './paginated.res';
 import { MaintenanceRequestStatus } from 'src/enums/maintenance-request-status.enum';
 import { CameraResponse } from './camera.res';
+import { UserResponse } from './user.res';
 
 export class MaintenanceRequestResponse extends BaseResponse {
   @ApiProperty({ type: CameraResponse })
@@ -33,7 +34,26 @@ export class MaintenanceRequestResponse extends BaseResponse {
 
   @ApiProperty()
   @Expose()
+  @Transform(({ obj }) => {
+    // If serviceProviderId is populated (object), extract the ID
+    if (obj.serviceProviderId && typeof obj.serviceProviderId === 'object') {
+      return obj.serviceProviderId._id?.toString() || obj.serviceProviderId.id?.toString() || obj.serviceProviderId;
+    }
+    return obj.serviceProviderId?.toString() || obj.serviceProviderId || '';
+  })
   serviceProviderId: string;
+
+  @ApiProperty({ type: UserResponse, required: false })
+  @Expose()
+  @Transform(({ obj }) => {
+    // If serviceProviderId is populated (object), map it to serviceProvider
+    if (obj.serviceProviderId && typeof obj.serviceProviderId === 'object') {
+      return obj.serviceProviderId;
+    }
+    return obj.serviceProvider || null;
+  })
+  @Type(() => UserResponse)
+  serviceProvider?: UserResponse;
 
   @ApiProperty()
   @Expose()

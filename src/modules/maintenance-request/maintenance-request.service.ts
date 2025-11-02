@@ -8,11 +8,13 @@ import { InjectModel } from '@nestjs/mongoose';
 import { PaginationQueryDto } from 'src/dtos/requests/query.dto';
 import { CameraStatus } from 'src/enums/camera-status.enum';
 import { MaintenanceRequestStatus } from 'src/enums/maintenance-request-status.enum';
+import { Role } from 'src/enums/role.enum';
 import { Camera, CameraModel } from 'src/schema/camera.schema';
 import {
   MaintenanceRequest,
   MaintenanceRequestModel,
 } from 'src/schema/maintenance-request.schema';
+import { User, UserModel } from 'src/schema/user.schema';
 
 @Injectable()
 export class MaintenanceRequestService {
@@ -21,7 +23,24 @@ export class MaintenanceRequestService {
     private maintenanceRequestModel: MaintenanceRequestModel,
     @InjectModel(Camera.name)
     private cameraModel: CameraModel,
+    @InjectModel(User.name)
+    private userModel: UserModel,
   ) {}
+
+  async hasActiveMaintenanceRequest(cameraId: string): Promise<boolean> {
+    const activeRequest = await this.maintenanceRequestModel.findOne({
+      camera: cameraId,
+      status: {
+        $in: [
+          MaintenanceRequestStatus.Pending,
+          MaintenanceRequestStatus.InProgress,
+          MaintenanceRequestStatus.PendingVerification,
+        ],
+      },
+    });
+
+    return !!activeRequest;
+  }
 
   async createMaintenanceRequest(
     cameraId: string,
@@ -32,6 +51,15 @@ export class MaintenanceRequestService {
     const camera = await this.cameraModel.findById(cameraId);
     if (!camera) {
       throw new NotFoundException('Camera not found');
+    }
+
+    // Check if camera already has an active maintenance request
+    const hasActiveRequest = await this.hasActiveMaintenanceRequest(cameraId);
+    if (hasActiveRequest) {
+      throw new HttpException(
+        'Camera already has an active maintenance request',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     const maintenanceRequest = new this.maintenanceRequestModel({
@@ -54,7 +82,7 @@ export class MaintenanceRequestService {
         limit: query.limit,
         page: query.page,
         sort: query.sortBy,
-        populate: 'camera',
+        populate: ['camera', 'serviceProviderId'],
       },
     );
 
@@ -64,7 +92,8 @@ export class MaintenanceRequestService {
   async getMaintenanceRequestById(id: string) {
     const maintenanceRequest = await this.maintenanceRequestModel
       .findById(id)
-      .populate('camera');
+      .populate('camera')
+      .populate('serviceProviderId');
 
     if (!maintenanceRequest) {
       throw new NotFoundException('Maintenance request not found');
@@ -86,7 +115,58 @@ export class MaintenanceRequestService {
         limit: query.limit,
         page: query.page,
         sort: query.sortBy,
-        populate: 'camera',
+        populate: ['camera', 'serviceProviderId'],
+      },
+    );
+
+    return maintenanceRequests;
+  }
+
+  async getUnassignedMaintenanceRequests(
+    query: PaginationQueryDto,
+    status?: MaintenanceRequestStatus,
+  ) {
+    const filter: any = {
+      $or: [
+        { serviceProviderId: null },
+        { serviceProviderId: { $exists: false } },
+      ],
+      ...query.filter,
+    };
+
+    if (status) {
+      filter.status = status;
+    }
+
+    const maintenanceRequests = await this.maintenanceRequestModel.paginate(
+      filter,
+      {
+        limit: query.limit,
+        page: query.page,
+        sort: query.sortBy,
+        populate: ['camera', 'serviceProviderId'],
+      },
+    );
+
+    return maintenanceRequests;
+  }
+
+  async getMaintenanceRequestsByStatusAndServiceProvider(
+    status: MaintenanceRequestStatus,
+    serviceProviderId: string,
+    query: PaginationQueryDto,
+  ) {
+    const maintenanceRequests = await this.maintenanceRequestModel.paginate(
+      {
+        status,
+        serviceProviderId,
+        ...query.filter,
+      },
+      {
+        limit: query.limit,
+        page: query.page,
+        sort: query.sortBy,
+        populate: ['camera', 'serviceProviderId'],
       },
     );
 
@@ -137,7 +217,8 @@ export class MaintenanceRequestService {
 
     return await this.maintenanceRequestModel
       .findById(requestId)
-      .populate('camera');
+      .populate('camera')
+      .populate('serviceProviderId');
   }
 
   async applyForVerification(
@@ -179,7 +260,8 @@ export class MaintenanceRequestService {
 
     return await this.maintenanceRequestModel
       .findById(requestId)
-      .populate('camera');
+      .populate('camera')
+      .populate('serviceProviderId');
   }
 
   async verifyMaintenanceRequest(requestId: string, administratorId: string) {
@@ -199,13 +281,13 @@ export class MaintenanceRequestService {
       );
     }
 
-    // Verify administrator matches
-    if (maintenanceRequest.administratorId?.toString() !== administratorId) {
-      throw new HttpException(
-        'You are not authorized to verify this request',
-        HttpStatus.FORBIDDEN,
-      );
-    }
+    // // Verify administrator matches
+    // if (maintenanceRequest.administratorId?.toString() !== administratorId) {
+    //   throw new HttpException(
+    //     'You are not authorized to verify this request',
+    //     HttpStatus.FORBIDDEN,
+    //   );
+    // }
 
     maintenanceRequest.status = MaintenanceRequestStatus.Completed;
 
@@ -219,7 +301,8 @@ export class MaintenanceRequestService {
 
     return await this.maintenanceRequestModel
       .findById(requestId)
-      .populate('camera');
+      .populate('camera')
+      .populate('serviceProviderId');
   }
 
   async getMaintenanceRequestsByServiceProvider(
@@ -235,7 +318,7 @@ export class MaintenanceRequestService {
         limit: query.limit,
         page: query.page,
         sort: query.sortBy,
-        populate: 'camera',
+        populate: ['camera', 'serviceProviderId'],
       },
     );
 
@@ -282,6 +365,63 @@ export class MaintenanceRequestService {
 
     return await this.maintenanceRequestModel
       .findById(requestId)
-      .populate('camera');
+      .populate('camera')
+      .populate('serviceProviderId');
+  }
+
+  async assignServiceProvider(
+    requestId: string,
+    serviceProviderId: string | null | undefined,
+    administratorId: string,
+  ) {
+    const maintenanceRequest =
+      await this.maintenanceRequestModel.findById(requestId);
+
+    if (!maintenanceRequest) {
+      throw new NotFoundException('Maintenance request not found');
+    }
+
+    // Allow assignment only for Pending and InProgress status requests
+    if (
+      maintenanceRequest.status !== MaintenanceRequestStatus.Pending &&
+      maintenanceRequest.status !== MaintenanceRequestStatus.InProgress
+    ) {
+      throw new HttpException(
+        'Service provider can only be assigned to pending or in-progress requests',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // If serviceProviderId is null, empty, or undefined, unassign the service provider
+    if (!serviceProviderId || serviceProviderId.trim() === '') {
+      maintenanceRequest.serviceProviderId = undefined as any;
+      await maintenanceRequest.save();
+
+      return await this.maintenanceRequestModel
+        .findById(requestId)
+        .populate(['camera', 'serviceProviderId']);
+    }
+
+    // Verify the service provider user exists and has ServiceProvider role
+    const serviceProvider = await this.userModel.findById(serviceProviderId);
+    if (!serviceProvider) {
+      throw new NotFoundException('Service provider not found');
+    }
+
+    if (serviceProvider.role !== Role.ServiceProvider) {
+      throw new HttpException(
+        'User is not a service provider',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    // Assign the service provider (allow reassignment)
+    maintenanceRequest.serviceProviderId = serviceProviderId as any;
+
+    await maintenanceRequest.save();
+
+    return await this.maintenanceRequestModel
+      .findById(requestId)
+      .populate(['camera', 'serviceProviderId']);
   }
 }

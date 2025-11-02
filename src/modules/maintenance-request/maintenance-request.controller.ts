@@ -13,6 +13,7 @@ import { AllowedRoles } from 'src/decorators/roles.decorator';
 import { CurrentUser, GetUser } from 'src/decorators/user.decorator';
 import {
   ApplyVerificationDto,
+  AssignServiceProviderDto,
   CreateMaintenanceRequestDto,
   RejectVerificationDto,
 } from 'src/dtos/requests/maintenance-request.dto';
@@ -183,6 +184,70 @@ export class MaintenanceRequestController {
   ) {
     const result =
       await this.maintenanceRequestService.getMaintenanceRequestsByServiceProvider(
+        user.id,
+        query,
+      );
+
+    return plainToInstance(PaginatedMaintenanceRequestResponse, result, {
+      enableCircularCheck: true,
+    });
+  }
+
+  @ApiResponse({ type: MaintenanceRequestResponse })
+  @AllowedRoles(Role.Administrator, Role.Admin)
+  @Patch('/:requestId/assign-service-provider')
+  async assignServiceProvider(
+    @Param('requestId', ObjectIdValidationPipe) requestId: string,
+    @GetUser() user: CurrentUser,
+    @Body() assignServiceProviderDto: AssignServiceProviderDto,
+  ) {
+    const result = await this.maintenanceRequestService.assignServiceProvider(
+      requestId,
+      assignServiceProviderDto.serviceProviderId,
+      user.id,
+    );
+
+    return plainToInstance(MaintenanceRequestResponse, result, {
+      enableCircularCheck: true,
+    });
+  }
+
+  @ApiResponse({ type: PaginatedMaintenanceRequestResponse })
+  @ApiQuery({ type: PaginationQueryOptions })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: MaintenanceRequestStatus,
+  })
+  @AllowedRoles(Role.ServiceProvider, Role.Admin, Role.Administrator)
+  @Get('unassigned')
+  async getUnassignedMaintenanceRequests(
+    @Query(QueryTransformPipe) query: PaginationQueryDto,
+    @Query('status') status?: MaintenanceRequestStatus,
+  ) {
+    const result =
+      await this.maintenanceRequestService.getUnassignedMaintenanceRequests(
+        query,
+        status,
+      );
+
+    return plainToInstance(PaginatedMaintenanceRequestResponse, result, {
+      enableCircularCheck: true,
+    });
+  }
+
+  @ApiResponse({ type: PaginatedMaintenanceRequestResponse })
+  @ApiQuery({ type: PaginationQueryOptions })
+  @AllowedRoles(Role.ServiceProvider, Role.Admin, Role.Administrator)
+  @Get('status/:status/service-provider/my-requests')
+  async getMyMaintenanceRequestsByStatus(
+    @Param('status') status: MaintenanceRequestStatus,
+    @GetUser() user: CurrentUser,
+    @Query(QueryTransformPipe) query: PaginationQueryDto,
+  ) {
+    const result =
+      await this.maintenanceRequestService.getMaintenanceRequestsByStatusAndServiceProvider(
+        status,
         user.id,
         query,
       );
