@@ -82,6 +82,21 @@ export class MaintenanceRequestController {
     });
   }
 
+  @ApiResponse({ type: MaintenanceRequestResponse })
+  @Get('latest/:cameraId')
+  async getLatestMaintenanceRequestByCameraId(
+    @Param('cameraId', ObjectIdValidationPipe) cameraId: string,
+  ) {
+    const result =
+      await this.maintenanceRequestService.getLatestMaintenanceRequestByCameraId(
+        cameraId,
+      );
+
+    return plainToInstance(MaintenanceRequestResponse, result, {
+      enableCircularCheck: true,
+    });
+  }
+
   @ApiResponse({ type: PaginatedMaintenanceRequestResponse })
   @ApiQuery({ type: PaginationQueryOptions })
   @Get('status/:status')

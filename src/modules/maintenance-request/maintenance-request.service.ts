@@ -102,6 +102,22 @@ export class MaintenanceRequestService {
     return maintenanceRequest;
   }
 
+  async getLatestMaintenanceRequestByCameraId(cameraId: string) {
+    const maintenanceRequest = await this.maintenanceRequestModel
+      .findOne({ camera: cameraId })
+      .sort({ requestDate: -1 })
+      .populate('camera')
+      .populate('serviceProviderId');
+
+    if (!maintenanceRequest) {
+      throw new NotFoundException(
+        'No maintenance requests found for the specified camera',
+      );
+    }
+
+    return maintenanceRequest;
+  }
+
   async getMaintenanceRequestsByStatus(
     status: MaintenanceRequestStatus,
     query: PaginationQueryDto,
