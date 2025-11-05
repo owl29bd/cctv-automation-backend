@@ -11,6 +11,11 @@ export class CreateMaintenanceRequestDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsString()
+  serviceProviderId: string;
 }
 
 export class ApplyVerificationDto {
@@ -33,4 +38,3 @@ export class AssignServiceProviderDto {
   @IsString()
   serviceProviderId?: string;
 }
-

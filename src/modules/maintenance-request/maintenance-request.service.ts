@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { CurrentUser } from 'src/decorators/user.decorator';
+import { CreateMaintenanceRequestDto } from 'src/dtos/requests/maintenance-request.dto';
 import { PaginationQueryDto } from 'src/dtos/requests/query.dto';
 import { CameraStatus } from 'src/enums/camera-status.enum';
 import { MaintenanceRequestStatus } from 'src/enums/maintenance-request-status.enum';
@@ -43,10 +45,11 @@ export class MaintenanceRequestService {
   }
 
   async createMaintenanceRequest(
-    cameraId: string,
-    administratorId: string,
-    notes?: string,
+    createMaintenanceRequestDto: CreateMaintenanceRequestDto,
+    CurrentUser: CurrentUser,
   ) {
+    const { cameraId, notes, serviceProviderId } = createMaintenanceRequestDto;
+    const administratorId = CurrentUser.id;
     // Verify camera exists
     const camera = await this.cameraModel.findById(cameraId);
     if (!camera) {
@@ -64,13 +67,21 @@ export class MaintenanceRequestService {
 
     const maintenanceRequest = new this.maintenanceRequestModel({
       camera: cameraId,
-      status: MaintenanceRequestStatus.Pending,
+      status: MaintenanceRequestStatus.InProgress,
       requestDate: new Date(),
       notes,
       administratorId,
+      serviceProviderId,
     });
 
-    return await maintenanceRequest.save();
+    const res = await maintenanceRequest.save();
+
+    // Update camera status to Maintenance
+    await this.cameraModel.findByIdAndUpdate(cameraId, {
+      status: CameraStatus.Maintenance,
+    });
+
+    return res;
   }
 
   async getMaintenanceRequests(query: PaginationQueryDto) {
@@ -237,10 +248,10 @@ export class MaintenanceRequestService {
       .populate('serviceProviderId');
   }
 
-  async applyForVerification(
+  async markAsComplete(
     requestId: string,
     serviceProviderId: string,
-    notes?: string,
+    feedback?: string,
   ) {
     const maintenanceRequest =
       await this.maintenanceRequestModel.findById(requestId);
@@ -266,13 +277,19 @@ export class MaintenanceRequestService {
       );
     }
 
-    maintenanceRequest.status = MaintenanceRequestStatus.PendingVerification;
-    maintenanceRequest.verificationRequestDate = new Date();
-    if (notes) {
-      maintenanceRequest.notes = notes;
+    maintenanceRequest.status = MaintenanceRequestStatus.Completed;
+    maintenanceRequest.acceptedDate = new Date();
+    if (feedback) {
+      maintenanceRequest.feedback = feedback;
     }
 
     await maintenanceRequest.save();
+
+    const camera = await this.cameraModel.findById(maintenanceRequest.camera);
+    if (camera) {
+      camera.status = CameraStatus.Online;
+      await camera.save();
+    }
 
     return await this.maintenanceRequestModel
       .findById(requestId)

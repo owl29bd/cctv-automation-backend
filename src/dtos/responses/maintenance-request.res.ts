@@ -1,9 +1,9 @@
-import { Expose, Transform, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
-import { BaseResponse } from './base.res';
-import { PaginatedResponse } from './paginated.res';
+import { Expose, Transform, Type } from 'class-transformer';
 import { MaintenanceRequestStatus } from 'src/enums/maintenance-request-status.enum';
+import { BaseResponse } from './base.res';
 import { CameraResponse } from './camera.res';
+import { PaginatedResponse } from './paginated.res';
 import { UserResponse } from './user.res';
 
 export class MaintenanceRequestResponse extends BaseResponse {
@@ -32,12 +32,20 @@ export class MaintenanceRequestResponse extends BaseResponse {
   @Expose()
   notes?: string;
 
+  @ApiProperty({ required: false })
+  @Expose()
+  feedback?: string;
+
   @ApiProperty()
   @Expose()
   @Transform(({ obj }) => {
     // If serviceProviderId is populated (object), extract the ID
     if (obj.serviceProviderId && typeof obj.serviceProviderId === 'object') {
-      return obj.serviceProviderId._id?.toString() || obj.serviceProviderId.id?.toString() || obj.serviceProviderId;
+      return (
+        obj.serviceProviderId._id?.toString() ||
+        obj.serviceProviderId.id?.toString() ||
+        obj.serviceProviderId
+      );
     }
     return obj.serviceProviderId?.toString() || obj.serviceProviderId || '';
   })
@@ -65,4 +73,3 @@ export class PaginatedMaintenanceRequestResponse extends PaginatedResponse<Maint
   @Type(() => MaintenanceRequestResponse)
   data: MaintenanceRequestResponse[];
 }
-

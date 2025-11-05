@@ -40,14 +40,13 @@ export class MaintenanceRequestController {
   @AllowedRoles(Role.Administrator, Role.Admin)
   @Post()
   async createMaintenanceRequest(
-    @GetUser() user: CurrentUser,
+    @GetUser() currentUser: CurrentUser,
     @Body() createMaintenanceRequestDto: CreateMaintenanceRequestDto,
   ) {
     const result =
       await this.maintenanceRequestService.createMaintenanceRequest(
-        createMaintenanceRequestDto.cameraId,
-        user.id,
-        createMaintenanceRequestDto.notes,
+        createMaintenanceRequestDto,
+        currentUser,
       );
 
     return plainToInstance(MaintenanceRequestResponse, result, {
@@ -135,13 +134,13 @@ export class MaintenanceRequestController {
 
   @ApiResponse({ type: MaintenanceRequestResponse })
   @AllowedRoles(Role.ServiceProvider, Role.Admin, Role.Administrator)
-  @Patch('/:requestId/apply-verification')
+  @Patch('/:requestId/mark-as-complete')
   async applyForVerification(
     @Param('requestId', ObjectIdValidationPipe) requestId: string,
     @GetUser() user: CurrentUser,
     @Body() applyVerificationDto: ApplyVerificationDto,
   ) {
-    const result = await this.maintenanceRequestService.applyForVerification(
+    const result = await this.maintenanceRequestService.markAsComplete(
       requestId,
       user.id,
       applyVerificationDto.notes,

@@ -28,6 +28,9 @@ export class MaintenanceRequest extends Document {
   @Prop()
   notes?: string;
 
+  @Prop()
+  feedback?: string;
+
   @Prop({ type: Types.ObjectId, ref: 'User' })
   serviceProviderId?: Types.ObjectId;
 
@@ -45,4 +48,3 @@ MaintenanceRequestSchema.loadClass(MaintenanceRequest);
 export interface MaintenanceRequestModel
   extends Model<MaintenanceRequest>,
     PaginateModel<MaintenanceRequest> {}
-
