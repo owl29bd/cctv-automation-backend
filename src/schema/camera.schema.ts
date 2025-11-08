@@ -15,6 +15,18 @@ export class Camera extends Document {
   @Prop({ required: true })
   location: string;
 
+  @Prop({ required: true })
+  ip: string;
+
+  @Prop({ required: true })
+  serialNumber: string;
+
+  @Prop({ type: Buffer })
+  image: Buffer;
+
+  @Prop()
+  imageContentType: string; // e.g., 'image/jpeg', 'image/png'
+
   @Prop({
     type: String,
     enum: CameraStatus,
@@ -30,4 +42,3 @@ CameraSchema.plugin(paginate);
 CameraSchema.loadClass(Camera);
 
 export interface CameraModel extends Model<Camera>, PaginateModel<Camera> {}
-

@@ -1,10 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { CameraStatus } from 'src/enums/camera-status.enum';
 
 export class CreateCameraDto {
@@ -22,6 +17,16 @@ export class CreateCameraDto {
   @IsNotEmpty()
   @IsString()
   location: string;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsString()
+  ip: string;
+
+  @ApiProperty()
+  @IsNotEmpty()
+  @IsString()
+  serialNumber: string;
 
   @ApiPropertyOptional({ enum: CameraStatus, default: CameraStatus.Online })
   @IsOptional()
@@ -45,9 +50,18 @@ export class UpdateCameraDto {
   @IsString()
   location?: string;
 
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  ip?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  serialNumber?: string;
+
   @ApiPropertyOptional({ enum: CameraStatus })
   @IsOptional()
   @IsEnum(CameraStatus)
   status?: CameraStatus;
 }
-

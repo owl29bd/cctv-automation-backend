@@ -1,8 +1,8 @@
-import { Expose, Type } from 'class-transformer';
 import { ApiProperty } from '@nestjs/swagger';
+import { Expose, Type } from 'class-transformer';
+import { CameraStatus } from 'src/enums/camera-status.enum';
 import { BaseResponse } from './base.res';
 import { PaginatedResponse } from './paginated.res';
-import { CameraStatus } from 'src/enums/camera-status.enum';
 
 export class CameraResponse extends BaseResponse {
   @ApiProperty()
@@ -17,6 +17,22 @@ export class CameraResponse extends BaseResponse {
   @Expose()
   location: string;
 
+  @ApiProperty()
+  @Expose()
+  ip: string;
+
+  @ApiProperty()
+  @Expose()
+  serialNumber: string;
+
+  @ApiProperty({ required: false })
+  @Expose()
+  image?: string; // Base64 encoded image
+
+  @ApiProperty({ required: false })
+  @Expose()
+  imageContentType?: string;
+
   @ApiProperty({ enum: CameraStatus })
   @Expose()
   status: CameraStatus;
@@ -27,4 +43,3 @@ export class PaginatedCameraResponse extends PaginatedResponse<CameraResponse> {
   @Type(() => CameraResponse)
   data: CameraResponse[];
 }
-
