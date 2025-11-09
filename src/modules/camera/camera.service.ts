@@ -161,4 +161,14 @@ export class CameraService {
 
     return this.convertPaginatedImages(cameras);
   }
+
+  async getAllCameraIdsAndIps() {
+    const cameras = await this.cameraModel
+      .find({ status: { $ne: CameraStatus.Maintenance } }, { _id: 1, ip: 1 })
+      .lean();
+    return cameras.map((camera) => ({
+      id: camera._id.toString(),
+      ip: camera.ip,
+    }));
+  }
 }

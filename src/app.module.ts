@@ -10,10 +10,11 @@ import { ExceptionFilterModule } from './exception-filter/exception-filter.modul
 import { AuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { AuthModule } from './modules/auth/auth.module';
+import { CameraModule } from './modules/camera/camera.module';
+import { MaintenanceRequestModule } from './modules/maintenance-request/maintenance-request.module';
+import { PingModule } from './modules/ping/ping.module';
 import { TokenModule } from './modules/token/token.module';
 import { UserManagementModule } from './modules/user-management/user-management.module';
-import { MaintenanceRequestModule } from './modules/maintenance-request/maintenance-request.module';
-import { CameraModule } from './modules/camera/camera.module';
 import { SchemaModule } from './schema/schema.module';
 
 @Module({
@@ -62,6 +63,7 @@ import { SchemaModule } from './schema/schema.module';
     UserManagementModule,
     MaintenanceRequestModule,
     CameraModule,
+    PingModule,
   ],
   controllers: [AppController],
   providers: [
