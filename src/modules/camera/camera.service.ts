@@ -10,7 +10,7 @@ export class CameraService {
   constructor(@InjectModel(Camera.name) private cameraModel: CameraModel) {}
 
   // Helper method to convert Buffer to base64
-  private convertImageToBase64(camera: any): any {
+  convertImageToBase64(camera: any): any {
     if (!camera) return camera;
 
     // Don't convert to object yet, keep the document to preserve Buffer

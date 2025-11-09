@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { CameraStatus } from 'src/enums/camera-status.enum';
 
 export class CreateMaintenanceRequestDto {
   @ApiProperty()
@@ -23,6 +24,11 @@ export class ApplyVerificationDto {
   @IsOptional()
   @IsString()
   notes?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  status?: CameraStatus;
 }
 
 export class RejectVerificationDto {

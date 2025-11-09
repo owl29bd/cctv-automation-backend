@@ -17,6 +17,7 @@ import {
   MaintenanceRequestModel,
 } from 'src/schema/maintenance-request.schema';
 import { User, UserModel } from 'src/schema/user.schema';
+import { CameraService } from '../camera/camera.service';
 
 @Injectable()
 export class MaintenanceRequestService {
@@ -27,6 +28,7 @@ export class MaintenanceRequestService {
     private cameraModel: CameraModel,
     @InjectModel(User.name)
     private userModel: UserModel,
+    private readonly cameraService: CameraService,
   ) {}
 
   async hasActiveMaintenanceRequest(cameraId: string): Promise<boolean> {
@@ -108,6 +110,12 @@ export class MaintenanceRequestService {
 
     if (!maintenanceRequest) {
       throw new NotFoundException('Maintenance request not found');
+    }
+
+    if (maintenanceRequest.camera) {
+      maintenanceRequest.camera = await this.cameraService.getCameraById(
+        maintenanceRequest.camera._id.toString(),
+      );
     }
 
     return maintenanceRequest;
@@ -251,6 +259,7 @@ export class MaintenanceRequestService {
   async markAsComplete(
     requestId: string,
     serviceProviderId: string,
+    status: CameraStatus,
     feedback?: string,
   ) {
     const maintenanceRequest =
@@ -287,7 +296,7 @@ export class MaintenanceRequestService {
 
     const camera = await this.cameraModel.findById(maintenanceRequest.camera);
     if (camera) {
-      camera.status = CameraStatus.Online;
+      camera.status = status as CameraStatus;
       await camera.save();
     }
 
@@ -313,14 +322,6 @@ export class MaintenanceRequestService {
         HttpStatus.BAD_REQUEST,
       );
     }
-
-    // // Verify administrator matches
-    // if (maintenanceRequest.administratorId?.toString() !== administratorId) {
-    //   throw new HttpException(
-    //     'You are not authorized to verify this request',
-    //     HttpStatus.FORBIDDEN,
-    //   );
-    // }
 
     maintenanceRequest.status = MaintenanceRequestStatus.Completed;
 

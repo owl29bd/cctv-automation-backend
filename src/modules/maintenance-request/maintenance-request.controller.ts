@@ -143,6 +143,7 @@ export class MaintenanceRequestController {
     const result = await this.maintenanceRequestService.markAsComplete(
       requestId,
       user.id,
+      applyVerificationDto.status,
       applyVerificationDto.notes,
     );
 
