@@ -286,7 +286,10 @@ export class MaintenanceRequestService {
       );
     }
 
-    maintenanceRequest.status = MaintenanceRequestStatus.Completed;
+    maintenanceRequest.status =
+      status === CameraStatus.Online
+        ? MaintenanceRequestStatus.Completed
+        : MaintenanceRequestStatus.Failed;
     maintenanceRequest.acceptedDate = new Date();
     if (feedback) {
       maintenanceRequest.feedback = feedback;
