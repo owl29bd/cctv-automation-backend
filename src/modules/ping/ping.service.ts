@@ -2,6 +2,8 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import * as ping from 'ping';
 import { CameraService } from '../camera/camera.service';
+import { IMessage } from '../socket/message.dto';
+import { SocketService } from '../socket/socket.service';
 
 export interface PingResult {
   cameraId: string;
@@ -17,7 +19,10 @@ export class PingService {
   private readonly logger = new Logger(PingService.name);
   private readonly pingTimeout = 10000; // 10 seconds timeout
 
-  constructor(private readonly cameraService: CameraService) {}
+  constructor(
+    private readonly cameraService: CameraService,
+    private readonly socketService: SocketService,
+  ) {}
 
   /**
    * Ping a single host
@@ -130,5 +135,12 @@ export class PingService {
     const pingResults = await this.pingAllCameras();
     console.log(pingResults);
     // Here you can add logic to store pingResults in the database if needed
+    // test: send socket message to all connected clients
+    const iMessage: IMessage = {
+      type: 'pingResults',
+      content: 'Ping job executed',
+      timestamp: new Date(),
+    };
+    this.socketService.broadcast(iMessage);
   }
 }
