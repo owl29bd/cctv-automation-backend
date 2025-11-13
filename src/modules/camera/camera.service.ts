@@ -4,6 +4,7 @@ import { CreateCameraDto, UpdateCameraDto } from 'src/dtos/requests/camera.dto';
 import { PaginationQueryDto } from 'src/dtos/requests/query.dto';
 import { CameraStatus } from 'src/enums/camera-status.enum';
 import { Camera, CameraModel } from 'src/schema/camera.schema';
+import { StatusChange } from '../ping/ping.service';
 
 @Injectable()
 export class CameraService {
@@ -164,11 +165,28 @@ export class CameraService {
 
   async getAllCameraIdsAndIps() {
     const cameras = await this.cameraModel
-      .find({ status: { $ne: CameraStatus.Maintenance } }, { _id: 1, ip: 1 })
+      .find(
+        { status: { $ne: CameraStatus.Maintenance } },
+        { _id: 1, ip: 1, status: 1 },
+      )
       .lean();
     return cameras.map((camera) => ({
       id: camera._id.toString(),
       ip: camera.ip,
+      status: camera.status,
     }));
+  }
+
+  async updateCameraStatuses(statusChanges: StatusChange[]) {
+    const bulkOps = statusChanges.map(({ cameraId, newStatus }) => ({
+      updateOne: {
+        filter: { _id: cameraId },
+        update: { status: newStatus },
+      },
+    }));
+
+    if (bulkOps.length > 0) {
+      await this.cameraModel.bulkWrite(bulkOps);
+    }
   }
 }

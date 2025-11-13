@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import * as ping from 'ping';
+import { CameraStatus } from 'src/enums/camera-status.enum';
 import { CameraService } from '../camera/camera.service';
 import { IMessage } from '../socket/message.dto';
 import { SocketService } from '../socket/socket.service';
@@ -14,10 +15,16 @@ export interface PingResult {
   timestamp: Date;
 }
 
+export interface StatusChange {
+  cameraId: string;
+  previousStatus: string;
+  newStatus: string;
+}
+
 @Injectable()
 export class PingService {
   private readonly logger = new Logger(PingService.name);
-  private readonly pingTimeout = 10000; // 10 seconds timeout
+  private readonly pingTimeout = 3000; // 10 seconds timeout
 
   constructor(
     private readonly cameraService: CameraService,
@@ -56,7 +63,7 @@ export class PingService {
         this.logger.warn(`✗ ${ip} - Failed: ${pingResult.error}`);
       }
 
-      console.log('pingResult', pingResult);
+      // console.log('pingResult', pingResult);
 
       return pingResult;
     } catch (error) {
@@ -77,18 +84,23 @@ export class PingService {
   /**
    * Ping all cameras sequentially
    */
-  async pingAllCameras(): Promise<PingResult[]> {
+  async pingAllCameras(): Promise<{
+    pingResults: PingResult[];
+    statusChanges: StatusChange[];
+  }> {
     const results: PingResult[] = [];
+    const changes: StatusChange[] = [];
 
     const cameras = await this.cameraService.getAllCameraIdsAndIps();
+    console.log('Cameras to ping:', cameras);
     if (cameras.length === 0) {
       this.logger.warn('No cameras found in the database to ping.');
-      return results;
+      return { pingResults: results, statusChanges: changes };
     }
 
     this.logger.log(`Starting to ping ${cameras.length} camera(s)...`);
 
-    for (const { ip, id } of cameras) {
+    for (const { ip, id, status } of cameras) {
       try {
         const result = await this.pingHost(ip);
         // result.cameraId = id;
@@ -101,6 +113,26 @@ export class PingService {
           timestamp: result.timestamp,
         };
         results.push(pingResult);
+        // store camera status and pingresult.success missmatches
+        const previousStatus = status;
+        if (previousStatus === CameraStatus.Online && !pingResult.success) {
+          changes.push({
+            cameraId: id,
+            previousStatus,
+            newStatus: CameraStatus.Offline,
+          });
+        } else if (
+          (previousStatus === CameraStatus.Offline ||
+            previousStatus === CameraStatus.Dead ||
+            previousStatus === CameraStatus.Lost) &&
+          pingResult.success
+        ) {
+          changes.push({
+            cameraId: id,
+            previousStatus,
+            newStatus: CameraStatus.Online,
+          });
+        }
       } catch (error) {
         // Continue pinging other cameras even if one fails
         const errorResult: PingResult = {
@@ -122,23 +154,26 @@ export class PingService {
       `Ping completed: ${successCount} successful, ${failureCount} failed out of ${results.length} total`,
     );
 
-    return results;
+    return { pingResults: results, statusChanges: changes };
   }
 
   /**
-   * Scheduled cron job to ping all cameras every 10 minutes
-   * Cron expression: every 10 minutes (0, 10, 20, 30, 40, 50 minutes past the hour)
+   * Scheduled cron job to ping all cameras every 2 minutes
+   * Cron expression: every 2 minutes (0, 2, 4, 6, 8, 10, ... minutes past the hour)
    */
-  @Cron('*/1 * * * *')
+  @Cron('*/2 * * * *')
   async handleCron() {
     this.logger.log('Running scheduled ping job...');
-    const pingResults = await this.pingAllCameras();
-    console.log(pingResults);
-    // Here you can add logic to store pingResults in the database if needed
+    const pingResultsWithstatusChanges = await this.pingAllCameras();
+
+    // store pingResultsWithstatusChanges.statusChanges in the database
+    await this.cameraService.updateCameraStatuses(
+      pingResultsWithstatusChanges.statusChanges,
+    );
     // test: send socket message to all connected clients
     const iMessage: IMessage = {
       type: 'pingResults',
-      content: 'Ping job executed',
+      content: pingResultsWithstatusChanges.statusChanges,
       timestamp: new Date(),
     };
     this.socketService.broadcast(iMessage);
